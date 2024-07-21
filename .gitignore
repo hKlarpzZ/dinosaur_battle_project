@@ -1,0 +1,7 @@
+Debug/
+*.psd
+x64/
+*.vcxproj*
+packages.config
+test.cpp
+*.exe
