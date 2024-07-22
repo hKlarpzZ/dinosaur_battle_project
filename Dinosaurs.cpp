@@ -893,8 +893,10 @@ class CardInventory
 public:
     vector<DinoCard> cards;
     vector<Vector2i> card_positions;
+    vector<int> visible;
     int scroll_offset = 0;
-    bool update_text_fields_flag = true; // fixed internal SFML draw custom objects error
+    int scroll_value = 0;
+    //bool update_text_fields_flag = true; // fixed internal SFML draw custom objects error
 
     CardInventory(Box box, vector<Texture*> dino_bg, vector<Texture*> dino_holder, vector<Texture*> dino_stat_holder, vector<Texture*> dino_holder_glow)
     {
@@ -914,6 +916,7 @@ public:
                 current_card_position.y = ((i - 1) / 2) * (dinocard.card_bg.getSize().y + 80);
             }
             card_positions.push_back(current_card_position);
+            visible.push_back(0);
         }
     }
 
@@ -935,29 +938,38 @@ public:
 
         for (size_t i = 0; i < cards.size(); i++)
         {
-            if (check_for_visibility(&cards[i], window))
+            if (check_for_visibility(&cards[i], &visible[i], window))
             {
-                if (update_text_fields_flag)
+                /*if (update_text_fields_flag)
                 {
                     cards[i].name_handler.init(cards[i].name_handler.text.getString());
                     cards[i].i_handler.init(cards[i].i_handler.text.getString());
                     cards[i].s_handler.init(cards[i].s_handler.text.getString());
                     cards[i].d_handler.init(cards[i].d_handler.text.getString());
                     cards[i].cost_handler.init(cards[i].cost_handler.text.getString());
-                }
+                }*/
 
                 cards[i].draw(window);
             }
         }
-        if (update_text_fields_flag)
+        /*if (update_text_fields_flag)
         {
             update_text_fields_flag = false;
-        }
+        }*/
         
     }
 
     void check_scroll()
     {
+        if (scroll_value > 0)
+        {
+            scroll_offset -= 50;
+        }
+        if (scroll_value < 0)
+        {
+            scroll_offset += 50;
+        }
+        scroll_value = 0;
         //cout << Mouse::Wheel::VerticalWheel;
         /*if(Mouse::Wheel::VerticalWheel)
         {
@@ -970,15 +982,28 @@ public:
         }*/
     }
 
-    bool check_for_visibility(DinoCard* dinocard, RenderWindow& window)
+    bool check_for_visibility(DinoCard* dinocard, int* visible_state, RenderWindow& window)
     {
         if (dinocard->card_bg.getGlobalBounds().top > window.getSize().y)
         {
+            *visible_state = 0;
             return false;
         }
         if (dinocard->card_bg.getGlobalBounds().top + dinocard->card_bg.getGlobalBounds().height < 0)
         {
+            *visible_state = 0;
             return false;
+        }
+
+        if (*visible_state == 0)
+        {
+            dinocard->name_handler.init(dinocard->name_handler.text.getString());
+            dinocard->i_handler.init(dinocard->i_handler.text.getString());
+            dinocard->s_handler.init(dinocard->s_handler.text.getString());
+            dinocard->d_handler.init(dinocard->d_handler.text.getString());
+            dinocard->cost_handler.init(dinocard->cost_handler.text.getString());
+
+            *visible_state = 1;
         }
         return true;
     }
@@ -1126,6 +1151,19 @@ int main()
         {
             if (event.type == Event::Closed)
                 window.close();
+            if (event.type == Event::MouseWheelScrolled)
+            {
+                //cout << "Scrolled a wheel: " << event.mouseWheel.delta << endl;
+                /*if (event.mouseWheelScroll.delta > 0)
+                {
+                    cout << "Scrolled a wheel up: " << event.mouseWheelScroll.delta << endl;
+                }
+                else
+                {
+                    cout << "Scrolled a wheel down: " << event.mouseWheelScroll.delta << endl;
+                }*/
+                card_inventory.scroll_value = event.mouseWheelScroll.delta;
+            }
         }
 
         window.clear();
