@@ -934,7 +934,8 @@ public:
 
     void draw(RenderWindow& window)
     {
-        check_scroll();
+        int window_vertical_size = window.getSize().y;
+        check_scroll(window_vertical_size);
 
         for (size_t i = 0; i < cards.size(); i++)
         {
@@ -959,15 +960,22 @@ public:
         
     }
 
-    void check_scroll()
+    void check_scroll(int window_vertical_size)
     {
         if (scroll_value > 0)
         {
-            scroll_offset -= 50;
+            if (scroll_offset >= 50)
+            {
+                scroll_offset -= 50;
+            }
         }
         if (scroll_value < 0)
         {
-            scroll_offset += 50;
+            if (scroll_offset <= card_positions[card_positions.size() - 1].y + cards[cards.size() - 1].card_bg.getSize().y - window_vertical_size + 60)
+            {
+                scroll_offset += 50;
+            }
+            
         }
         scroll_value = 0;
         //cout << Mouse::Wheel::VerticalWheel;

@@ -10,3 +10,4 @@ Velociraptor Velociraptor 21 19 22 31
 Velociraptor Velociraptor 12 10 14 18
 Velociraptor Velociraptor 18 11 21 25
 Velociraptor Velociraptor 18 17 28 31
+Dilophosaurus Dilophosaurus 18 17 28 31
