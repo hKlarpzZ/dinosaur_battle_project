@@ -992,12 +992,12 @@ public:
 
     bool check_for_visibility(DinoCard* dinocard, int* visible_state, RenderWindow& window)
     {
-        if (dinocard->card_bg.getGlobalBounds().top > window.getSize().y)
+        if ((dinocard->card_bg.getGlobalBounds().top > window.getSize().y) && (!dinocard->animate_press_to) && (!dinocard->animate_press_from))
         {
             *visible_state = 0;
             return false;
         }
-        if (dinocard->card_bg.getGlobalBounds().top + dinocard->card_bg.getGlobalBounds().height < 0)
+        if ((dinocard->card_bg.getGlobalBounds().top + dinocard->card_bg.getGlobalBounds().height < 0) && (!dinocard->animate_press_to) && (!dinocard->animate_press_from))
         {
             *visible_state = 0;
             return false;
@@ -1014,6 +1014,104 @@ public:
             *visible_state = 1;
         }
         return true;
+    }
+};
+
+class InventoryPool{
+public:
+    Pool* player_pool;
+    vector<Texture*> dino_bg;
+    vector<Texture*> dino_holder;
+    vector<Texture*> dino_stat_holder;
+    vector<Texture*> dino_holder_glow;
+    Vector2i pos;
+    vector<DinoCard> slots;
+
+    InventoryPool(Pool* player_pool_got, vector<Texture*> dino_bg_got, vector<Texture*> dino_holder_got, vector<Texture*> dino_stat_holder_got, vector<Texture*> dino_holder_glow_got)
+    {
+        player_pool = player_pool_got;
+        for (size_t i = 0; i < dino_bg_got.size(); i++)
+        {
+            dino_bg.push_back(dino_bg_got[i]);
+        }
+        for (size_t i = 0; i < dino_holder_got.size(); i++)
+        {
+            dino_holder.push_back(dino_holder_got[i]);
+        }
+        for (size_t i = 0; i < dino_stat_holder_got.size(); i++)
+        {
+            dino_stat_holder.push_back(dino_stat_holder_got[i]);
+        }
+        for (size_t i = 0; i < dino_holder_glow_got.size(); i++)
+        {
+            dino_holder_glow.push_back(dino_holder_glow_got[i]);
+        }
+        Dino service_dino;
+        service_dino.changeName("This is a bug");
+        DinoCard service_slot(&service_dino, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
+        slots.push_back(service_slot);
+        slots.push_back(service_slot);
+        slots.push_back(service_slot);
+        pos.x = 40;
+        pos.y = 200;
+    }
+
+    ~InventoryPool() {}
+
+    void update()
+    {
+        if (player_pool->slot1 != NULL)
+        {
+            DinoCard slot1(player_pool->slot1, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
+            slots[0] = slot1;
+            //cout << string(slots[0].name_handler.text.getString()) << endl;
+            slots[0].name_handler.init(slots[0].name_handler.text.getString());
+            slots[0].i_handler.init(slots[0].i_handler.text.getString());
+            slots[0].s_handler.init(slots[0].s_handler.text.getString());
+            slots[0].d_handler.init(slots[0].d_handler.text.getString());
+            slots[0].cost_handler.init(slots[0].cost_handler.text.getString());
+        }
+        if (player_pool->slot2 != NULL)
+        {
+            DinoCard slot2(player_pool->slot2, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
+            slots[1] = slot2;
+            //cout << string(slots[0].name_handler.text.getString()) << endl;
+            slots[1].name_handler.init(slots[1].name_handler.text.getString());
+            slots[1].i_handler.init(slots[1].i_handler.text.getString());
+            slots[1].s_handler.init(slots[1].s_handler.text.getString());
+            slots[1].d_handler.init(slots[1].d_handler.text.getString());
+            slots[1].cost_handler.init(slots[1].cost_handler.text.getString());
+        }
+        if (player_pool->slot3 != NULL)
+        {
+            DinoCard slot3(player_pool->slot3, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
+            slots[2] = slot3;
+            //cout << string(slots[0].name_handler.text.getString()) << endl;
+            slots[2].name_handler.init(slots[2].name_handler.text.getString());
+            slots[2].i_handler.init(slots[2].i_handler.text.getString());
+            slots[2].s_handler.init(slots[2].s_handler.text.getString());
+            slots[2].d_handler.init(slots[2].d_handler.text.getString());
+            slots[2].cost_handler.init(slots[2].cost_handler.text.getString());
+        }
+    }
+
+    void draw(RenderWindow& window)
+    {
+        if (player_pool->slot1 != NULL)
+        {
+            slots[0].set_position(pos.x, pos.y);
+            slots[0].draw(window);
+        }
+        if (player_pool->slot2 != NULL)
+        {
+            slots[1].set_position(pos.x + 200, pos.y + 40);
+            slots[1].draw(window);
+        }
+        if (player_pool->slot3 != NULL)
+        {
+            slots[2].set_position(pos.x + 400, pos.y + 80);
+            slots[2].draw(window);
+        }
     }
 };
 
@@ -1127,6 +1225,10 @@ int main()
     go_to_shop(shop_vel, shop_tri, shop_dil, shopPool);
 
     CardInventory card_inventory(box, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
+    InventoryPool inventory_pool(&playerPool, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
+    Button exit_idle_button;
+    exit_idle_button.set_position(100, window.getSize().y - 150);
+    exit_idle_button.background.setFillColor(Color(0, 255, 0, 255));
     
 
     //Создание карточек в магазине
@@ -1179,10 +1281,13 @@ int main()
         switch (gamestage)
         {
         case Idle:
+            background.setTexture(background_shop, true);
             //background.setTexture(background_idle);
             background.setColor(Color::White);
             center_text(location_text_info, "lobby", window);
+            location_text_info.setPosition(335, 47);
             location_text_info_background.setTexture(&location_info_holder_idle);
+            location_text_info_background.setPosition(200, 20);
 
             window.draw(background);
             window.draw(location_text_info_background);
@@ -1193,7 +1298,48 @@ int main()
             card_inventory.set_position(740, 0);
             card_inventory.draw(window);
 
+            for (size_t i = 0; i < card_inventory.cards.size(); i++)
+            {
+                if (card_inventory.cards[i].ready_to_check)
+                {
+                    playerPool.add(card_inventory.cards[i].dino);
+                    inventory_pool.update();
+                    //cout << "Added dino to player pool: " << playerPool.slot1->get_cost() << endl;
+                    card_inventory.cards[i].ready_to_check = false;
+                    card_inventory.cards[i].hoverable = true;
+                    card_inventory.cards[i].pressable = true;
+                    card_inventory.cards[i].animate_press_from = true;
+                }
+            }
+
+            for (size_t i = 0; i < 3; i++)
+            {
+                if (inventory_pool.slots[i].ready_to_check)
+                {
+                    inventory_pool.slots[i].hoverable = true;
+                    inventory_pool.slots[i].pressable = true;
+                    inventory_pool.slots[i].ready_to_check = false;
+                    playerPool.remove(i + 1);
+                }
+            }
+
+            inventory_pool.draw(window);
+
+            exit_idle_button.draw(window);
+
+            if (exit_idle_button.is_pressed)
+            {
+                exit_idle_button.is_pressed = false;
+                if (!playerPool.isEmpty())
+                {
+                    gamestage = Battle;
+                }
+            }
+
             break;
+
+
+
         case Battle:
             background.setTexture(background_river);
             center_text(location_text_info, "battle", window);
@@ -1201,6 +1347,9 @@ int main()
             window.draw(location_text_info_background);
             window.draw(location_text_info);
             break;
+
+
+
         case Shop:
             shopcard1.set_position(window.getSize().x / 2 - 1.8 * shopcard1.card_bg.getSize().x, 200);
             shopcard2.set_position((window.getSize().x - shopcard2.card_bg.getSize().x) / 2, 200);
