@@ -26,7 +26,7 @@ public:
         strength = 10 + (rand() % 21);
         dexterity = 10 + (rand() % 21);
         intelligence = 10 + (rand() % 21);
-        health = 100;
+        health = 99;
         cost = int((strength + dexterity + intelligence) / 2);
     }
 
@@ -61,7 +61,7 @@ public:
 
     void heal()
     {
-        health = 100;
+        health = 99;
     }
 
     int get_cost()
@@ -1115,6 +1115,248 @@ public:
     }
 };
 
+
+
+class DinoBattleCard
+{
+public:
+    Dino* dino;
+    RectangleShape card_bg;
+    RectangleShape card_holder;
+    RectangleShape card_holder_glow;
+    RectangleShape card_stat_attack_bg;
+    RectangleShape card_stat_health_bg;
+
+    string type;
+    string name;
+    TextHandler name_handler;
+    TextHandler attack_handler;
+    TextHandler health_handler;
+    int s;
+    int d;
+    int i;
+    int cost;
+    int attack;
+    int health;
+    Vector2i animate_offset_hover;
+    bool hoverable = true;
+    bool pressable = true;
+    int mouse_press_cd = 0;
+
+    DinoBattleCard(Dino* dino_imported, vector<Texture*> dino_bg, vector<Texture*> dino_holder, vector<Texture*> dino_stat_holder, vector<Texture*> dino_holder_glow)
+    {
+        animate_offset_hover.x = 0;
+        animate_offset_hover.y = 0;
+        dino = dino_imported;
+        attack = 0;
+        health = dino->get_hp();
+        Vector2f shop_card_size(250, 350);
+        card_bg.setSize(shop_card_size);
+        Vector2f card_holder_size(272, 400);
+        card_holder.setSize(card_holder_size);
+        Vector2f card_holder_glow_size(330, 446);
+        card_holder_glow.setSize(card_holder_glow_size);
+        Vector2f card_stat_attack_bg_size(60, 60);
+        card_stat_attack_bg.setSize(card_stat_attack_bg_size);
+        Vector2f card_stat_health_bg_size(60, 60);
+        card_stat_health_bg.setSize(card_stat_health_bg_size);
+
+
+        string dinotype = typeid(*dino).name();
+        dinotype.erase(0, 6);
+        if (dinotype == "Velociraptor") {
+            card_bg.setTexture(dino_bg[0], true);
+            card_holder.setTexture(dino_holder[0], true);
+            card_holder_glow.setTexture(dino_holder_glow[0], true);
+        }
+        else if (dinotype == "Triceratops") {
+            card_bg.setTexture(dino_bg[1], true);
+            card_holder.setTexture(dino_holder[1], true);
+            card_holder_glow.setTexture(dino_holder_glow[1], true);
+        }
+        else {
+            card_bg.setTexture(dino_bg[2], true);
+            card_holder.setTexture(dino_holder[2], true);
+            card_holder_glow.setTexture(dino_holder_glow[2], true);
+        }
+
+        dino->dump(&type, &name, &s, &d, &i, &cost);
+
+        name_handler.init(name);
+        health_handler.init(to_string(health));
+        attack_handler.init(to_string(attack));
+
+
+        card_stat_attack_bg.setTexture(dino_stat_holder[0], true);
+        card_stat_health_bg.setTexture(dino_stat_holder[1], true);
+    }
+
+    ~DinoBattleCard() {}
+
+    void set_position(int x, int y)
+    {
+        x = x + animate_offset_hover.x;
+        y = y + animate_offset_hover.y;
+        card_holder_glow.setPosition(x - 45, y - 48);
+        card_bg.setPosition(x, y);
+        card_holder.setPosition(x - 11, y - 25);
+        name_handler.set_position(x + (fabs(250 - name_handler.width) / 2), y + 260);
+
+        attack_handler.set_position(x - 8, y + 231);
+        health_handler.set_position(x - 8, y + 291);
+        card_stat_attack_bg.setPosition(x - 23, y + 216);
+        card_stat_health_bg.setPosition(x - 23, y + 276);
+    }
+
+    void draw(RenderWindow& window)
+    {
+        Vector2i mouse_position = Mouse::getPosition(window);
+
+        check_press(mouse_position);
+
+        if (check_hover(mouse_position) && hoverable)
+        {
+            window.draw(card_holder_glow);
+        }
+        window.draw(card_bg);
+        name_handler.draw(window);
+
+        window.draw(card_holder);
+        window.draw(card_stat_attack_bg);
+        attack_handler.draw(window);
+        window.draw(card_stat_health_bg);
+        health_handler.draw(window);
+    }
+
+    bool check_hover(Vector2i mouse_position)
+    {
+        if ((mouse_position.x > card_bg.getGlobalBounds().left) && (mouse_position.x < card_bg.getGlobalBounds().left + card_bg.getGlobalBounds().width) && (mouse_position.y > card_bg.getGlobalBounds().top) && (mouse_position.y < card_bg.getGlobalBounds().top + card_bg.getGlobalBounds().height) && hoverable)
+        {
+            if (animate_offset_hover.y > -20)
+            {
+                animate_offset_hover.y--;
+            }
+            return true;
+        }
+        if (animate_offset_hover.y < 0)
+        {
+            animate_offset_hover.y++;
+        }
+        return false;
+    }
+
+    void check_press(Vector2i mouse_position)
+    {
+        if ((Mouse::isButtonPressed(Mouse::Left)) && (mouse_press_cd < 10))
+        {
+            if ((mouse_position.x > card_bg.getGlobalBounds().left) && (mouse_position.x < card_bg.getGlobalBounds().left + card_bg.getGlobalBounds().width) && (mouse_position.y > card_bg.getGlobalBounds().top) && (mouse_position.y < card_bg.getGlobalBounds().top + card_bg.getGlobalBounds().height) && pressable)
+            {
+                mouse_press_cd++;
+            }
+        }
+        if ((!Mouse::isButtonPressed(Mouse::Left)) && (mouse_press_cd >= 10))
+        {
+            mouse_press_cd = 0;
+            on_press();
+        }
+    }
+
+    void on_press()
+    {
+        
+    }
+};
+
+class BattlePool
+{
+public:
+    Pool* player_pool;
+    vector<Texture*> dino_bg;
+    vector<Texture*> dino_holder;
+    vector<Texture*> dino_stat_holder;
+    vector<Texture*> dino_holder_glow;
+    Vector2i pos;
+    vector<DinoBattleCard> slots;
+
+    BattlePool(Pool* player_pool_got, vector<Texture*> dino_bg_got, vector<Texture*> dino_holder_got, vector<Texture*> dino_stat_holder_got, vector<Texture*> dino_holder_glow_got)
+    {
+        player_pool = player_pool_got;
+        for (size_t i = 0; i < dino_bg_got.size(); i++)
+        {
+            dino_bg.push_back(dino_bg_got[i]);
+        }
+        for (size_t i = 0; i < dino_holder_got.size(); i++)
+        {
+            dino_holder.push_back(dino_holder_got[i]);
+        }
+        for (size_t i = 0; i < dino_stat_holder_got.size(); i++)
+        {
+            dino_stat_holder.push_back(dino_stat_holder_got[i]);
+        }
+        for (size_t i = 0; i < dino_holder_glow_got.size(); i++)
+        {
+            dino_holder_glow.push_back(dino_holder_glow_got[i]);
+        }
+        Dino service_dino;
+        service_dino.changeName("This is a bug");
+        DinoBattleCard service_slot(&service_dino, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
+        slots.push_back(service_slot);
+        slots.push_back(service_slot);
+        slots.push_back(service_slot);
+        pos.x = 40;
+        pos.y = 200;
+    }
+
+    ~BattlePool() {}
+
+    void update()
+    {
+        if (player_pool->slot1 != NULL)
+        {
+            DinoBattleCard slot1(player_pool->slot1, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
+            slots[0] = slot1;
+            slots[0].name_handler.init(slots[0].name_handler.text.getString());
+            slots[0].attack_handler.init(slots[0].attack_handler.text.getString());
+            slots[0].health_handler.init(slots[0].health_handler.text.getString());
+        }
+        if (player_pool->slot2 != NULL)
+        {
+            DinoBattleCard slot2(player_pool->slot2, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
+            slots[1] = slot2;
+            slots[1].name_handler.init(slots[1].name_handler.text.getString());
+            slots[1].attack_handler.init(slots[1].attack_handler.text.getString());
+            slots[1].health_handler.init(slots[1].health_handler.text.getString());
+        }
+        if (player_pool->slot3 != NULL)
+        {
+            DinoBattleCard slot3(player_pool->slot3, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
+            slots[2] = slot3;
+            slots[2].name_handler.init(slots[2].name_handler.text.getString());
+            slots[2].attack_handler.init(slots[2].attack_handler.text.getString());
+            slots[2].health_handler.init(slots[2].health_handler.text.getString());
+        }
+    }
+
+    void draw(RenderWindow& window)
+    {
+        if (player_pool->slot1 != NULL)
+        {
+            slots[0].set_position(pos.x, pos.y);
+            slots[0].draw(window);
+        }
+        if (player_pool->slot2 != NULL)
+        {
+            slots[1].set_position(pos.x + 200, pos.y + 40);
+            slots[1].draw(window);
+        }
+        if (player_pool->slot3 != NULL)
+        {
+            slots[2].set_position(pos.x + 400, pos.y + 80);
+            slots[2].draw(window);
+        }
+    }
+};
+
 int main()
 {
     //Инициализация пользовательских структур
@@ -1186,6 +1428,14 @@ int main()
     card_stat_bg_cost.loadFromFile("./assets/card_stat_holder_cost.png");
     dino_card_stat_holder.push_back(&card_stat_bg_cost);
 
+    vector<Texture*> dino_battle_card_stat_holder;
+    Texture card_stat_bg_attack;
+    card_stat_bg_attack.loadFromFile("./assets/card_stat_holder_attack.png");
+    dino_battle_card_stat_holder.push_back(&card_stat_bg_attack);
+    Texture card_stat_bg_health;
+    card_stat_bg_health.loadFromFile("./assets/card_stat_holder_health.png");
+    dino_battle_card_stat_holder.push_back(&card_stat_bg_health);
+
     vector<Texture*> dino_card_holder_glow;
     Texture card_bg_intelligence_glow;
     card_bg_intelligence_glow.loadFromFile("./assets/card_bg_intelligence_glow.png");
@@ -1197,6 +1447,17 @@ int main()
     card_bg_dexterity_glow.loadFromFile("./assets/card_bg_dexterity_glow.png");
     dino_card_holder_glow.push_back(&card_bg_dexterity_glow);
 
+    vector<Texture*> dino_card_holder_battle_glow;
+    Texture card_bg_intelligence_battle_glow;
+    card_bg_intelligence_battle_glow.loadFromFile("./assets/card_bg_intelligence_battle_glow.png");
+    dino_card_holder_battle_glow.push_back(&card_bg_intelligence_battle_glow);
+    Texture card_bg_strength_battle_glow;
+    card_bg_strength_battle_glow.loadFromFile("./assets/card_bg_strength_battle_glow.png");
+    dino_card_holder_battle_glow.push_back(&card_bg_strength_battle_glow);
+    Texture card_bg_dexterity_battle_glow;
+    card_bg_dexterity_battle_glow.loadFromFile("./assets/card_bg_dexterity_battle_glow.png");
+    dino_card_holder_battle_glow.push_back(&card_bg_dexterity_battle_glow);
+
     Texture location_info_holder_idle;
     location_info_holder_idle.loadFromFile("./assets/title_handler_idle.png");
     Texture location_info_holder_battle;
@@ -1205,7 +1466,7 @@ int main()
     location_info_holder_shop.loadFromFile("./assets/title_handler_shop.png");
 
     //Создание бэкграунда
-    Sprite background(background_idle);
+    Sprite background(background_shop);
 
     //Создание подписи локации
     Text location_text_info("", font);
@@ -1222,16 +1483,32 @@ int main()
 
     Gamestage gamestage = Idle;
 
-    go_to_shop(shop_vel, shop_tri, shop_dil, shopPool);
+    //// Создание экземляров для боёвки
+    //Velociraptor vel;
+    //Triceratops tri;
+    //Dilophosaurus dil;
+    //playerPool.add(&vel);
+    //playerPool.add(&tri);
+    //playerPool.add(&dil);
+    BattlePool player_battle_pool(&playerPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
+    //player_battle_pool.update();
+    ///*Triceratops test_battle_dino;
+    //DinoBattleCard battle_dinocard(&test_battle_dino, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);*/
+
+
+    // Создание экземпляров для инвентаря
 
     CardInventory card_inventory(box, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
     InventoryPool inventory_pool(&playerPool, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
+    inventory_pool.update();
     Button exit_idle_button;
     exit_idle_button.set_position(100, window.getSize().y - 150);
     exit_idle_button.background.setFillColor(Color(0, 255, 0, 255));
     
 
     //Создание карточек в магазине
+
+    go_to_shop(shop_vel, shop_tri, shop_dil, shopPool);
 
     DinoCard shopcard1(shopPool.slot1, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
     DinoCard shopcard2(shopPool.slot2, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
@@ -1283,7 +1560,7 @@ int main()
         case Idle:
             background.setTexture(background_shop, true);
             //background.setTexture(background_idle);
-            background.setColor(Color::White);
+            //background.setColor(Color::White);
             center_text(location_text_info, "lobby", window);
             location_text_info.setPosition(335, 47);
             location_text_info_background.setTexture(&location_info_holder_idle);
@@ -1332,6 +1609,7 @@ int main()
                 exit_idle_button.is_pressed = false;
                 if (!playerPool.isEmpty())
                 {
+                    player_battle_pool.update();
                     gamestage = Battle;
                 }
             }
@@ -1341,11 +1619,19 @@ int main()
 
 
         case Battle:
-            background.setTexture(background_river);
+            location_text_info.setPosition(0, 76);
+            background.setTexture(background_shop, true);
             center_text(location_text_info, "battle", window);
+            location_text_info_background.setTexture(&location_info_holder_battle);
+            location_text_info_background.setPosition((window.getSize().x - location_text_info_background_size.x) / 2, 50);
+
             window.draw(background);
             window.draw(location_text_info_background);
             window.draw(location_text_info);
+
+            //player_battle_pool.set_position(200, 200);
+            player_battle_pool.draw(window);
+
             break;
 
 
@@ -1358,8 +1644,10 @@ int main()
             //shopcard2.hoverable = false;
 
             background.setTexture(background_shop, true);
+            location_text_info.setPosition(0, 76);
             center_text(location_text_info, "shop", window);
             location_text_info_background.setTexture(&location_info_holder_shop);
+            location_text_info_background.setPosition((window.getSize().x - location_text_info_background_size.x) / 2, 50);
 
             window.draw(background);
             window.draw(location_text_info_background);
