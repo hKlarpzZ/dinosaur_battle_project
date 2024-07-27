@@ -1142,6 +1142,7 @@ public:
     bool hoverable = true;
     bool pressable = true;
     int mouse_press_cd = 0;
+    bool is_pressed = false;
 
     DinoBattleCard(Dino* dino_imported, vector<Texture*> dino_bg, vector<Texture*> dino_holder, vector<Texture*> dino_stat_holder, vector<Texture*> dino_holder_glow)
     {
@@ -1263,7 +1264,8 @@ public:
 
     void on_press()
     {
-        
+        is_pressed = true;
+        //cout << "Pressed on dinocard";
     }
 };
 
@@ -1276,7 +1278,14 @@ public:
     vector<Texture*> dino_stat_holder;
     vector<Texture*> dino_holder_glow;
     Vector2i pos;
+    Vector2i animation_pos;
     vector<DinoBattleCard> slots;
+    bool animate_to_down = false;
+    bool animate_to_up = false;
+    bool animate_from_down = false;
+    bool animate_from_up = false;
+    bool animation_to_completed = false;
+    bool animation_from_completed = false;
 
     BattlePool(Pool* player_pool_got, vector<Texture*> dino_bg_got, vector<Texture*> dino_holder_got, vector<Texture*> dino_stat_holder_got, vector<Texture*> dino_holder_glow_got)
     {
@@ -1305,6 +1314,8 @@ public:
         slots.push_back(service_slot);
         pos.x = 0;
         pos.y = 0;
+        animation_pos.x = 0;
+        animation_pos.y = 0;
     }
 
     ~BattlePool() {}
@@ -1317,7 +1328,7 @@ public:
             slots[0] = slot1;
             slots[0].name_handler.init(slots[0].name_handler.text.getString());
             slots[0].attack_handler.init(to_string(slots[0].dino->damage(terrain)));
-            slots[0].health_handler.init(slots[0].health_handler.text.getString());
+            slots[0].health_handler.init(to_string(slots[0].dino->get_hp()));
         }
         if (player_pool->slot2 != NULL)
         {
@@ -1325,7 +1336,7 @@ public:
             slots[1] = slot2;
             slots[1].name_handler.init(slots[1].name_handler.text.getString());
             slots[1].attack_handler.init(to_string(slots[1].dino->damage(terrain)));
-            slots[1].health_handler.init(slots[1].health_handler.text.getString());
+            slots[1].health_handler.init(to_string(slots[1].dino->get_hp()));
         }
         if (player_pool->slot3 != NULL)
         {
@@ -1333,14 +1344,51 @@ public:
             slots[2] = slot3;
             slots[2].name_handler.init(slots[2].name_handler.text.getString());
             slots[2].attack_handler.init(to_string(slots[2].dino->damage(terrain)));
-            slots[2].health_handler.init(slots[2].health_handler.text.getString());
+            slots[2].health_handler.init(to_string(slots[2].dino->get_hp()));
         }
     }
 
     void set_position(int x, int y)
     {
-        pos.x = x;
-        pos.y = y;
+        if (animate_to_up && (animation_pos.y > -500))
+        {
+            animation_pos.y--;
+            if (animation_pos.y == -500)
+            {
+                animate_to_up = false;
+                animation_to_completed = true;
+            }
+        }
+        if (animate_to_down && (animation_pos.y < 500))
+        {
+            animation_pos.y++;
+            if (animation_pos.y == 500)
+            {
+                animate_to_down = false;
+                animation_to_completed = true;
+            }
+        }
+        if (animate_from_down && (animation_pos.y > 0))
+        {
+            animation_pos.y--;
+            if (animation_pos.y == 0)
+            {
+                animate_from_down = false;
+                animation_from_completed = true;
+            }
+        }
+        if (animate_from_up && (animation_pos.y < 0))
+        {
+            animation_pos.y++;
+            if (animation_pos.y == 0)
+            {
+                animate_from_up = false;
+                animation_from_completed = true;
+            }
+        }
+
+        pos.x = x + animation_pos.x;
+        pos.y = y + animation_pos.y;
     }
 
     void draw(RenderWindow& window)
@@ -1370,6 +1418,29 @@ public:
         slots[1].pressable = false;
         slots[2].hoverable = false;
         slots[2].pressable = false;
+    }
+};
+
+class Fight
+{
+public:
+    Vector2i pos;
+    DinoBattleCard* atacker;
+    DinoBattleCard* defender;
+    
+    Fight()
+    {
+        pos.x = 0;
+        pos.y = 0;
+
+    }
+
+    ~Fight() {}
+
+    void set_position(int x, int y)
+    {
+        pos.x = x;
+        pos.y = y;
     }
 };
 
@@ -1508,6 +1579,9 @@ int main()
     enemyPool.add(&dil);
     BattlePool player_battle_pool(&playerPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
     BattlePool enemy_battle_pool(&enemyPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
+
+    DinoBattleCard* atacker = NULL;
+    DinoBattleCard* defender = NULL;
     
     ///*Triceratops test_battle_dino;
     //DinoBattleCard battle_dinocard(&test_battle_dino, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);*/
@@ -1638,6 +1712,14 @@ int main()
                         terrain = Mountain;
                         break;
                     }
+                    for (size_t i = 0; i < player_battle_pool.slots.size(); i++)
+                    {
+                        player_battle_pool.slots[i].dino->heal();
+                    }
+                    for (size_t i = 0; i < enemy_battle_pool.slots.size(); i++)
+                    {
+                        enemy_battle_pool.slots[i].dino->heal();
+                    }
                     player_battle_pool.update(terrain);
                     enemy_battle_pool.update(terrain);
                     enemy_battle_pool.set_visual();
@@ -1668,6 +1750,64 @@ int main()
 
             player_battle_pool.set_position(20, 400);
             enemy_battle_pool.set_position(590, 30);
+
+            if (player_battle_pool.slots[0].is_pressed)
+            {
+                player_battle_pool.animate_to_down = true;
+                player_battle_pool.slots[0].is_pressed = false;
+                atacker = &player_battle_pool.slots[0];
+            }
+            if (player_battle_pool.slots[1].is_pressed)
+            {
+                player_battle_pool.animate_to_down = true;
+                player_battle_pool.slots[1].is_pressed = false;
+                atacker = &player_battle_pool.slots[0];
+            }
+            if (player_battle_pool.slots[2].is_pressed)
+            {
+                player_battle_pool.animate_to_down = true;
+                player_battle_pool.slots[2].is_pressed = false;
+                atacker = &player_battle_pool.slots[0];
+            }
+
+            if (player_battle_pool.animation_to_completed)
+            {
+                enemy_battle_pool.animate_to_up = true;
+                player_battle_pool.animation_to_completed = false;
+            }
+
+            if (enemy_battle_pool.animation_to_completed)
+            {
+                while (true)
+                {
+                    switch (rand() % 3)
+                    {
+                    case 0:
+                        if (enemyPool.slot1 != NULL)
+                        {
+                            defender = &enemy_battle_pool.slots[0];
+                        }
+                        break;
+                    case 1:
+                        if (enemyPool.slot2 != NULL)
+                        {
+                            defender = &enemy_battle_pool.slots[1];
+                        }
+                        break;
+                    case 2:
+                        if (enemyPool.slot3 != NULL)
+                        {
+                            defender = &enemy_battle_pool.slots[2];
+                        }
+                        break;
+                    }
+                    if (defender != NULL)
+                    {
+                        break;
+                    }
+                }
+                enemy_battle_pool.animation_to_completed = false;
+            }
             
             center_text(location_text_info, "battle", window);
             location_text_info_background.setTexture(&location_info_holder_battle);
