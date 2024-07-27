@@ -1303,20 +1303,20 @@ public:
         slots.push_back(service_slot);
         slots.push_back(service_slot);
         slots.push_back(service_slot);
-        pos.x = 40;
-        pos.y = 200;
+        pos.x = 0;
+        pos.y = 0;
     }
 
     ~BattlePool() {}
 
-    void update()
+    void update(Terrain terrain)
     {
         if (player_pool->slot1 != NULL)
         {
             DinoBattleCard slot1(player_pool->slot1, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
             slots[0] = slot1;
             slots[0].name_handler.init(slots[0].name_handler.text.getString());
-            slots[0].attack_handler.init(slots[0].attack_handler.text.getString());
+            slots[0].attack_handler.init(to_string(slots[0].dino->damage(terrain)));
             slots[0].health_handler.init(slots[0].health_handler.text.getString());
         }
         if (player_pool->slot2 != NULL)
@@ -1324,7 +1324,7 @@ public:
             DinoBattleCard slot2(player_pool->slot2, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
             slots[1] = slot2;
             slots[1].name_handler.init(slots[1].name_handler.text.getString());
-            slots[1].attack_handler.init(slots[1].attack_handler.text.getString());
+            slots[1].attack_handler.init(to_string(slots[1].dino->damage(terrain)));
             slots[1].health_handler.init(slots[1].health_handler.text.getString());
         }
         if (player_pool->slot3 != NULL)
@@ -1332,9 +1332,15 @@ public:
             DinoBattleCard slot3(player_pool->slot3, dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
             slots[2] = slot3;
             slots[2].name_handler.init(slots[2].name_handler.text.getString());
-            slots[2].attack_handler.init(slots[2].attack_handler.text.getString());
+            slots[2].attack_handler.init(to_string(slots[2].dino->damage(terrain)));
             slots[2].health_handler.init(slots[2].health_handler.text.getString());
         }
+    }
+
+    void set_position(int x, int y)
+    {
+        pos.x = x;
+        pos.y = y;
     }
 
     void draw(RenderWindow& window)
@@ -1346,14 +1352,24 @@ public:
         }
         if (player_pool->slot2 != NULL)
         {
-            slots[1].set_position(pos.x + 200, pos.y + 40);
+            slots[1].set_position(pos.x + 240, pos.y + 30);
             slots[1].draw(window);
         }
         if (player_pool->slot3 != NULL)
         {
-            slots[2].set_position(pos.x + 400, pos.y + 80);
+            slots[2].set_position(pos.x + 480, pos.y + 60);
             slots[2].draw(window);
         }
+    }
+
+    void set_visual()
+    {
+        slots[0].hoverable = false;
+        slots[0].pressable = false;
+        slots[1].hoverable = false;
+        slots[1].pressable = false;
+        slots[2].hoverable = false;
+        slots[2].pressable = false;
     }
 };
 
@@ -1484,14 +1500,15 @@ int main()
     Gamestage gamestage = Idle;
 
     //// Создание экземляров для боёвки
-    //Velociraptor vel;
-    //Triceratops tri;
-    //Dilophosaurus dil;
-    //playerPool.add(&vel);
-    //playerPool.add(&tri);
-    //playerPool.add(&dil);
+    Velociraptor vel;
+    Triceratops tri;
+    Dilophosaurus dil;
+    enemyPool.add(&vel);
+    enemyPool.add(&tri);
+    enemyPool.add(&dil);
     BattlePool player_battle_pool(&playerPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
-    //player_battle_pool.update();
+    BattlePool enemy_battle_pool(&enemyPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
+    
     ///*Triceratops test_battle_dino;
     //DinoBattleCard battle_dinocard(&test_battle_dino, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);*/
 
@@ -1609,7 +1626,21 @@ int main()
                 exit_idle_button.is_pressed = false;
                 if (!playerPool.isEmpty())
                 {
-                    player_battle_pool.update();
+                    switch (rand() % 3)
+                    {
+                    case 0:
+                        terrain = Plain;
+                        break;
+                    case 1:
+                        terrain = River;
+                        break;
+                    case 2:
+                        terrain = Mountain;
+                        break;
+                    }
+                    player_battle_pool.update(terrain);
+                    enemy_battle_pool.update(terrain);
+                    enemy_battle_pool.set_visual();
                     gamestage = Battle;
                 }
             }
@@ -1619,11 +1650,30 @@ int main()
 
 
         case Battle:
-            location_text_info.setPosition(0, 76);
-            background.setTexture(background_shop, true);
+            switch (terrain)
+            {
+            case Plain:
+                background.setTexture(background_plain, true);
+                break;
+            case River:
+                background.setTexture(background_river, true);
+                break;
+            case Mountain:
+                background.setTexture(background_mountain, true);
+                break;
+            default:
+                background.setTexture(background_shop, true);
+                break;
+            }
+
+            player_battle_pool.set_position(20, 400);
+            enemy_battle_pool.set_position(590, 30);
+            
             center_text(location_text_info, "battle", window);
             location_text_info_background.setTexture(&location_info_holder_battle);
-            location_text_info_background.setPosition((window.getSize().x - location_text_info_background_size.x) / 2, 50);
+            //location_text_info_background.setPosition((window.getSize().x - location_text_info_background_size.x) / 2, 50);
+            location_text_info.setPosition(230, 47);
+            location_text_info_background.setPosition(100, 20);
 
             window.draw(background);
             window.draw(location_text_info_background);
@@ -1631,6 +1681,7 @@ int main()
 
             //player_battle_pool.set_position(200, 200);
             player_battle_pool.draw(window);
+            enemy_battle_pool.draw(window);
 
             break;
 

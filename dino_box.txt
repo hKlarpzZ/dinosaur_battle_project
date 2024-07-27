@@ -3,11 +3,5 @@ Triceratops Triceratops 22 10 29 30
 Velociraptor autobus 21 16 24 30
 Triceratops Triceratops 28 21 21 35
 Triceratops Triceratops 16 18 24 29
-Velociraptor Velociraptor 19 10 14 21
-Velociraptor Velociraptor 15 17 14 23
-Triceratops Triceratops 13 27 28 34
-Velociraptor Velociraptor 21 19 22 31
-Velociraptor Velociraptor 12 10 14 18
-Velociraptor Velociraptor 18 11 21 25
-Velociraptor Velociraptor 18 17 28 31
-Dilophosaurus Dilophosaurus 18 17 28 31
+Triceratops Test 10 10 10 0
+Dilophosaurus Test 99 99 99 0
