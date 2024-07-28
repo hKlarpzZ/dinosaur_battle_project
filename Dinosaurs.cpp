@@ -1427,20 +1427,92 @@ public:
     Vector2i pos;
     DinoBattleCard* atacker;
     DinoBattleCard* defender;
-    
+    TextHandler dmg_on_atacker;
+    TextHandler dmg_on_defender;
+    int offset;
+    bool animate_collision = false;
+    bool animation_completed = false;
+    int damage_animation_cd = 0;
+    int death_animation_cd = 0;
+    bool fight_completed = false;
+
     Fight()
     {
         pos.x = 0;
         pos.y = 0;
-
+        offset = 0;
     }
 
     ~Fight() {}
 
-    void set_position(int x, int y)
+    void set_attacker(DinoBattleCard* atacker_got)
     {
+        atacker = atacker_got;
+    }
+
+    void set_defender(DinoBattleCard* defender_got)
+    {
+        defender = defender_got;
+    }
+
+    void set_position(int x, int y, RenderWindow& window, Terrain terrain)
+    {
+        if (animate_collision && (offset < (window.getSize().x + 50) / 2))
+        {
+            offset++;
+            if (offset == (window.getSize().x + 50) / 2)
+            {
+                animation_completed = true;
+                animate_collision = false;
+                dmg_on_atacker.init("-" + to_string(defender->dino->damage(terrain)));
+                dmg_on_defender.init("-" + to_string(atacker->dino->damage(terrain)));
+                dmg_on_atacker.text.setCharacterSize(80);
+                dmg_on_defender.text.setCharacterSize(80);
+                damage_animation_cd = 2000;
+            }
+        }
         pos.x = x;
-        pos.y = y;
+        pos.y = (window.getSize().y - atacker->card_bg.getSize().y) / 2;
+        atacker->set_position(-50 - atacker->card_bg.getSize().x + offset, pos.y);
+        defender->set_position(50 + window.getSize().x - offset, pos.y);
+        if (animation_completed)
+        {
+            dmg_on_atacker.set_position(atacker->card_bg.getPosition().x + (atacker->card_bg.getSize().x / 2) - (dmg_on_defender.text.getLocalBounds().width / 2), pos.y + atacker->card_bg.getSize().y / 2 - (dmg_on_defender.text.getLocalBounds().height));
+            dmg_on_defender.set_position(defender->card_bg.getPosition().x + (defender->card_bg.getSize().x / 2) - (dmg_on_atacker.text.getLocalBounds().width / 2), pos.y + defender->card_bg.getSize().y / 2 - (dmg_on_atacker.text.getLocalBounds().height));
+        }
+    }
+
+    void draw(RenderWindow& window)
+    {
+        atacker->draw(window);
+        defender->draw(window);
+        if (animation_completed && (damage_animation_cd > 0))
+        {
+            dmg_on_atacker.draw(window);
+            dmg_on_defender.draw(window);
+            damage_animation_cd--;
+            if (damage_animation_cd == 0)
+            {
+                atacker->dino->get_damage(-1 * stoi(string(dmg_on_atacker.text.getString())));
+                defender->dino->get_damage(-1 * stoi(string(dmg_on_defender.text.getString())));
+                atacker->health = atacker->dino->get_hp();
+                atacker->health_handler.init(to_string(atacker->health));
+                defender->health = defender->dino->get_hp();
+                defender->health_handler.init(to_string(defender->health));
+                death_animation_cd = 2000;
+            }
+            //cout << animation_cd << endl;
+        }
+        if (animation_completed && (death_animation_cd > 0))
+        {
+            death_animation_cd--;
+            if (death_animation_cd == 0)
+            {
+                animation_completed = false;
+                fight_completed = true;
+                offset = 0;
+            }
+        }
     }
 };
 
@@ -1579,6 +1651,8 @@ int main()
     enemyPool.add(&dil);
     BattlePool player_battle_pool(&playerPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
     BattlePool enemy_battle_pool(&enemyPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
+
+    Fight fight;
 
     DinoBattleCard* atacker = NULL;
     DinoBattleCard* defender = NULL;
@@ -1748,26 +1822,46 @@ int main()
                 break;
             }
 
+            center_text(location_text_info, "battle", window);
+            location_text_info_background.setTexture(&location_info_holder_battle);
+            //location_text_info_background.setPosition((window.getSize().x - location_text_info_background_size.x) / 2, 50);
+            location_text_info.setPosition(230, 47);
+            location_text_info_background.setPosition(100, 20);
+
+            window.draw(background);
+            window.draw(location_text_info_background);
+            window.draw(location_text_info);
+
             player_battle_pool.set_position(20, 400);
             enemy_battle_pool.set_position(590, 30);
+            //player_battle_pool.set_position(200, 200);
+            player_battle_pool.draw(window);
+            enemy_battle_pool.draw(window);
+
 
             if (player_battle_pool.slots[0].is_pressed)
             {
                 player_battle_pool.animate_to_down = true;
                 player_battle_pool.slots[0].is_pressed = false;
                 atacker = &player_battle_pool.slots[0];
+                atacker->hoverable = false;
+                atacker->pressable = false;
             }
             if (player_battle_pool.slots[1].is_pressed)
             {
                 player_battle_pool.animate_to_down = true;
                 player_battle_pool.slots[1].is_pressed = false;
-                atacker = &player_battle_pool.slots[0];
+                atacker = &player_battle_pool.slots[1];
+                atacker->hoverable = false;
+                atacker->pressable = false;
             }
             if (player_battle_pool.slots[2].is_pressed)
             {
                 player_battle_pool.animate_to_down = true;
                 player_battle_pool.slots[2].is_pressed = false;
-                atacker = &player_battle_pool.slots[0];
+                atacker = &player_battle_pool.slots[2];
+                atacker->hoverable = false;
+                atacker->pressable = false;
             }
 
             if (player_battle_pool.animation_to_completed)
@@ -1803,25 +1897,42 @@ int main()
                     }
                     if (defender != NULL)
                     {
+                        fight.set_attacker(atacker);
+                        fight.set_defender(defender);
+                        fight.animate_collision = true;
                         break;
                     }
                 }
+
                 enemy_battle_pool.animation_to_completed = false;
             }
             
-            center_text(location_text_info, "battle", window);
-            location_text_info_background.setTexture(&location_info_holder_battle);
-            //location_text_info_background.setPosition((window.getSize().x - location_text_info_background_size.x) / 2, 50);
-            location_text_info.setPosition(230, 47);
-            location_text_info_background.setPosition(100, 20);
+            if (fight.animate_collision || fight.animation_completed)
+            {
+                fight.set_position(0, 0, window, terrain);
+                fight.draw(window);
+            }
 
-            window.draw(background);
-            window.draw(location_text_info_background);
-            window.draw(location_text_info);
+            if (fight.fight_completed)
+            {
+                atacker->hoverable = true;
+                atacker->pressable = true;
+                player_battle_pool.animate_from_down = true;
+                enemy_battle_pool.animate_from_up = true;
+                fight.fight_completed = false;
+            }
 
-            //player_battle_pool.set_position(200, 200);
-            player_battle_pool.draw(window);
-            enemy_battle_pool.draw(window);
+            if (player_battle_pool.animation_from_completed)
+            {
+                player_battle_pool.animation_from_completed = false;
+            }
+            
+            if (enemy_battle_pool.animation_from_completed)
+            {
+                enemy_battle_pool.animation_from_completed = false;
+            }
+
+            
 
             break;
 
