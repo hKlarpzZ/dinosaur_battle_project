@@ -1920,6 +1920,35 @@ int main()
                 player_battle_pool.animate_from_down = true;
                 enemy_battle_pool.animate_from_up = true;
                 fight.fight_completed = false;
+                
+                if ((playerPool.slot1 != NULL) && (playerPool.slot1->get_hp() <= 0))
+                {
+                    playerPool.slot1 = NULL;
+                }
+                if ((playerPool.slot2 != NULL) && (playerPool.slot2->get_hp() <= 0))
+                {
+                    playerPool.slot2 = NULL;
+                }
+                if ((playerPool.slot3 != NULL) && (playerPool.slot3->get_hp() <= 0))
+                {
+                    playerPool.slot3 = NULL;
+                }
+
+                if ((enemyPool.slot1 != NULL) && (enemyPool.slot1->get_hp() <= 0))
+                {
+                    enemyPool.slot1 = NULL;
+                }
+                if ((enemyPool.slot2 != NULL) && (enemyPool.slot2->get_hp() <= 0))
+                {
+                    enemyPool.slot2 = NULL;
+                }
+                if ((enemyPool.slot3 != NULL) && (enemyPool.slot3->get_hp() <= 0))
+                {
+                    enemyPool.slot3 = NULL;
+                }
+
+                atacker = NULL;
+                defender = NULL;
             }
 
             if (player_battle_pool.animation_from_completed)
@@ -1930,6 +1959,17 @@ int main()
             if (enemy_battle_pool.animation_from_completed)
             {
                 enemy_battle_pool.animation_from_completed = false;
+                if (playerPool.isEmpty())
+                {
+                    go_to_shop(shop_vel, shop_tri, shop_dil, shopPool);
+                    gamestage = Shop;
+                }
+                if (enemyPool.isEmpty())
+                {
+                    go_to_shop(shop_vel, shop_tri, shop_dil, shopPool);
+                    gamestage = Shop;
+                    balance + 10 + (rand() % 20);
+                }
             }
 
             
