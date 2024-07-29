@@ -5,3 +5,7 @@ Triceratops Triceratops 28 21 21 35
 Triceratops Triceratops 16 18 24 29
 Triceratops Test 10 10 10 0
 Dilophosaurus Test 99 99 99 0
+Velociraptor Velociraptor 25 23 20 34
+Triceratops Triceratops 20 15 18 26
+Velociraptor Velociraptor 13 17 18 24
+Dilophosaurus Dilophosaurus 22 30 25 38

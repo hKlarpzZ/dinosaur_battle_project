@@ -398,6 +398,76 @@ public:
         }
     }*/
 
+    void re_init()
+    {
+        box_dinos.clear();
+
+        velos.clear();
+        trices.clear();
+        dilos.clear();
+
+        ifstream box_read;
+        box_read.open("dino_box.txt");
+        string line = "";
+
+        while (getline(box_read, line))
+        {
+            istringstream line_stream(line); // Создаёт поток символов из строки
+            vector<string> words; // Создаёт массив(вектор) слов
+            string word;
+            while (getline(line_stream, word, ' ')) // Разбивает слова из потока и записывает в массив(вектор)
+            {
+                if (!word.empty())
+                {
+                    words.push_back(word);
+                }
+            }
+
+            string dino_type = words[0];
+            string dino_name = words[1];
+            int dino_strength = stoi(words[2]);
+            int dino_dexterity = stoi(words[3]);
+            int dino_intelligence = stoi(words[4]);
+            int dino_cost = stoi(words[5]);
+            if (dino_type == "Velociraptor")
+            {
+                Velociraptor dino;
+                dino.set(dino_name, dino_strength, dino_dexterity, dino_intelligence, dino_cost);
+                velos.push_back(dino);
+            }
+            else if (dino_type == "Triceratops")
+            {
+                Triceratops dino;
+                dino.set(dino_name, dino_strength, dino_dexterity, dino_intelligence, dino_cost);
+                trices.push_back(dino);
+            }
+            else if (dino_type == "Dilophosaurus")
+            {
+                Dilophosaurus dino;
+                dino.set(dino_name, dino_strength, dino_dexterity, dino_intelligence, dino_cost);
+                dilos.push_back(dino);
+            }
+
+        }
+
+        for (int i = 0; i < velos.size(); i++)
+        {
+            box_dinos.push_back(&velos[i]);
+        }
+
+        for (int i = 0; i < trices.size(); i++)
+        {
+            box_dinos.push_back(&trices[i]);
+        }
+
+        for (int i = 0; i < dilos.size(); i++)
+        {
+            box_dinos.push_back(&dilos[i]);
+        }
+
+        box_read.close();
+    }
+
     void add(Dino* dino)
     {
         string dino_type;
@@ -436,7 +506,7 @@ public:
             << dino_dexterity << " " << dino_intelligence << " " << dino_cost << endl;
         box_write.close();
 
-        // cout << dino_type << dino_name << dino_strength << dino_dexterity << dino_intelligence << dino_cost << endl;
+        //cout << dino_type << dino_name << dino_strength << dino_dexterity << dino_intelligence << dino_cost << endl;
 
     }
 
@@ -527,7 +597,7 @@ public:
 
 
 
-enum Gamestage { Idle, Battle, Shop };
+enum Gamestage { Idle, Battle, Shop, Battle_end };
 
 void center_text(Text& location_text_info, string text, RenderWindow& window)
 {
@@ -921,6 +991,32 @@ public:
     }
 
     ~CardInventory() {}
+
+    void re_init(Box box, vector<Texture*> dino_bg, vector<Texture*> dino_holder, vector<Texture*> dino_stat_holder, vector<Texture*> dino_holder_glow)
+    {
+        cards.clear();
+        card_positions.clear();
+        visible.clear();
+
+        for (int i = 0; i < box.box_dinos.size(); i++)
+        {
+            DinoCard dinocard(box.box_dinos[i], dino_bg, dino_holder, dino_stat_holder, dino_holder_glow);
+            cards.push_back(dinocard);
+            Vector2i current_card_position(0, 0);
+            if (i % 2 == 0)
+            {
+                current_card_position.x = 0;
+                current_card_position.y = (i / 2) * (dinocard.card_bg.getSize().y + 80);
+            }
+            else
+            {
+                current_card_position.x = dinocard.card_bg.getSize().x + 60;
+                current_card_position.y = ((i - 1) / 2) * (dinocard.card_bg.getSize().y + 80);
+            }
+            card_positions.push_back(current_card_position);
+            visible.push_back(0);
+        }
+    }
 
     void set_position(int x, int y)
     {
@@ -1516,6 +1612,32 @@ public:
     }
 };
 
+void go_to_battle(Velociraptor& enemy_vel, Triceratops& enemy_tri, Dilophosaurus& enemy_dil, Pool& enemyPool, Pool& playerPool)
+{
+    if (playerPool.slot1 != NULL)
+    {
+        enemy_vel = Velociraptor();
+        enemyPool.add(&enemy_vel);
+    }
+    if (playerPool.slot2 != NULL)
+    {
+        enemy_tri = Triceratops();
+        enemyPool.add(&enemy_tri);
+    }
+    if (playerPool.slot3 != NULL)
+    {
+        enemy_dil = Dilophosaurus();
+        enemyPool.add(&enemy_dil);
+    }
+}
+
+void go_out_of_battle(Pool& enemyPool)
+{
+    enemyPool.remove(1);
+    enemyPool.remove(2);
+    enemyPool.remove(3);
+}
+
 int main()
 {
     //Инициализация пользовательских структур
@@ -1643,12 +1765,6 @@ int main()
     Gamestage gamestage = Idle;
 
     //// Создание экземляров для боёвки
-    Velociraptor vel;
-    Triceratops tri;
-    Dilophosaurus dil;
-    enemyPool.add(&vel);
-    enemyPool.add(&tri);
-    enemyPool.add(&dil);
     BattlePool player_battle_pool(&playerPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
     BattlePool enemy_battle_pool(&enemyPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
 
@@ -1786,6 +1902,7 @@ int main()
                         terrain = Mountain;
                         break;
                     }
+                    go_to_battle(enemy_vel, enemy_tri, enemy_dil, enemyPool, playerPool);
                     for (size_t i = 0; i < player_battle_pool.slots.size(); i++)
                     {
                         player_battle_pool.slots[i].dino->heal();
@@ -1962,11 +2079,64 @@ int main()
                 if (playerPool.isEmpty())
                 {
                     go_to_shop(shop_vel, shop_tri, shop_dil, shopPool);
+
+                    DinoCard shopcard1_new(shopPool.slot1, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
+                    shopcard1 = shopcard1_new;
+                    DinoCard shopcard2_new(shopPool.slot2, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
+                    shopcard2 = shopcard2_new;
+                    DinoCard shopcard3_new(shopPool.slot3, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
+                    shopcard3 = shopcard3_new;
+
+                    shopcard1.name_handler.init(shopcard1.name_handler.text.getString());
+                    shopcard1.i_handler.init(shopcard1.i_handler.text.getString());
+                    shopcard1.s_handler.init(shopcard1.s_handler.text.getString());
+                    shopcard1.d_handler.init(shopcard1.d_handler.text.getString());
+                    shopcard1.cost_handler.init(shopcard1.cost_handler.text.getString());
+
+                    shopcard2.name_handler.init(shopcard2.name_handler.text.getString());
+                    shopcard2.i_handler.init(shopcard2.i_handler.text.getString());
+                    shopcard2.s_handler.init(shopcard2.s_handler.text.getString());
+                    shopcard2.d_handler.init(shopcard2.d_handler.text.getString());
+                    shopcard2.cost_handler.init(shopcard2.cost_handler.text.getString());
+
+                    shopcard3.name_handler.init(shopcard3.name_handler.text.getString());
+                    shopcard3.i_handler.init(shopcard3.i_handler.text.getString());
+                    shopcard3.s_handler.init(shopcard3.s_handler.text.getString());
+                    shopcard3.d_handler.init(shopcard3.d_handler.text.getString());
+                    shopcard3.cost_handler.init(shopcard3.cost_handler.text.getString());
+
+                    go_out_of_battle(enemyPool);
                     gamestage = Shop;
                 }
                 if (enemyPool.isEmpty())
                 {
                     go_to_shop(shop_vel, shop_tri, shop_dil, shopPool);
+
+                    DinoCard shopcard1_new(shopPool.slot1, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
+                    shopcard1 = shopcard1_new;
+                    DinoCard shopcard2_new(shopPool.slot2, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
+                    shopcard2 = shopcard2_new;
+                    DinoCard shopcard3_new(shopPool.slot3, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
+                    shopcard3 = shopcard3_new;
+
+                    shopcard1.name_handler.init(shopcard1.name_handler.text.getString());
+                    shopcard1.i_handler.init(shopcard1.i_handler.text.getString());
+                    shopcard1.s_handler.init(shopcard1.s_handler.text.getString());
+                    shopcard1.d_handler.init(shopcard1.d_handler.text.getString());
+                    shopcard1.cost_handler.init(shopcard1.cost_handler.text.getString());
+
+                    shopcard2.name_handler.init(shopcard2.name_handler.text.getString());
+                    shopcard2.i_handler.init(shopcard2.i_handler.text.getString());
+                    shopcard2.s_handler.init(shopcard2.s_handler.text.getString());
+                    shopcard2.d_handler.init(shopcard2.d_handler.text.getString());
+                    shopcard2.cost_handler.init(shopcard2.cost_handler.text.getString());
+
+                    shopcard3.name_handler.init(shopcard3.name_handler.text.getString());
+                    shopcard3.i_handler.init(shopcard3.i_handler.text.getString());
+                    shopcard3.s_handler.init(shopcard3.s_handler.text.getString());
+                    shopcard3.d_handler.init(shopcard3.d_handler.text.getString());
+                    shopcard3.cost_handler.init(shopcard3.cost_handler.text.getString());
+
                     gamestage = Shop;
                     balance + 10 + (rand() % 20);
                 }
@@ -2035,7 +2205,12 @@ int main()
                 if ((selected_shopcard != NULL) && (balance.can_afford(selected_shopcard->cost)))
                 {
                     balance - selected_shopcard->cost;
+                    //selected_shopcard->dino->printCard();
                     box.add(selected_shopcard->dino);
+
+                    box.re_init();
+                    card_inventory.re_init(box, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
+                    
                     selected_shopcard->ready_to_check = false;
 
                     gamestage = Idle;
@@ -2050,6 +2225,14 @@ int main()
                 go_out_of_shop(shopPool);
                 exit_shop_button.is_pressed = false;
             }
+
+
+
+            break;
+
+
+
+        case Battle_end:
 
 
 
