@@ -9,3 +9,5 @@ Velociraptor Velociraptor 25 23 20 34
 Triceratops Triceratops 20 15 18 26
 Velociraptor Velociraptor 13 17 18 24
 Dilophosaurus Dilophosaurus 22 30 25 38
+Velociraptor Velociraptor 20 30 22 36
+Velociraptor Velociraptor 20 15 18 26

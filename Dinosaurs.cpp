@@ -1638,6 +1638,51 @@ void go_out_of_battle(Pool& enemyPool)
     enemyPool.remove(3);
 }
 
+class EndBattleInfoTable
+{
+public:
+    TextHandler status_text;
+    TextHandler money_got;
+    int animation_time = 0;
+
+    EndBattleInfoTable()
+    {
+        status_text.init("This is a bug");
+        money_got.init("You got 0 coins!");
+
+        status_text.text.setCharacterSize(100);
+        money_got.text.setCharacterSize(40);
+
+        status_text.update(status_text.text.getString());
+        money_got.update(money_got.text.getString());
+    }
+
+    ~EndBattleInfoTable() {}
+
+    void update(string new_status, int money)
+    {
+        status_text.update(new_status);
+        money_got.update("You got " + to_string(money) + " coins!");
+        animation_time = 4000;
+    }
+
+    void set_position(RenderWindow& window)
+    {
+        status_text.set_position(window.getSize().x / 2 - status_text.width / 2, window.getSize().y / 2 - status_text.height);
+        money_got.set_position(window.getSize().x / 2 - money_got.width / 2, window.getSize().y / 2 + 20);
+    }
+
+    void draw(RenderWindow& window)
+    {
+        if (animation_time > 0)
+        {
+            animation_time--;
+        }
+        status_text.draw(window);
+        money_got.draw(window);
+    }
+};
+
 int main()
 {
     //Инициализация пользовательских структур
@@ -1772,6 +1817,10 @@ int main()
 
     DinoBattleCard* atacker = NULL;
     DinoBattleCard* defender = NULL;
+
+    int money_increment = 0;
+
+    EndBattleInfoTable end_battle_info_tab;
     
     ///*Triceratops test_battle_dino;
     //DinoBattleCard battle_dinocard(&test_battle_dino, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);*/
@@ -2106,9 +2155,10 @@ int main()
                     shopcard3.cost_handler.init(shopcard3.cost_handler.text.getString());
 
                     go_out_of_battle(enemyPool);
-                    gamestage = Shop;
+                    gamestage = Battle_end;
+                    end_battle_info_tab.update("Loser", 0);
                 }
-                if (enemyPool.isEmpty())
+                else if (enemyPool.isEmpty())
                 {
                     go_to_shop(shop_vel, shop_tri, shop_dil, shopPool);
 
@@ -2137,8 +2187,10 @@ int main()
                     shopcard3.d_handler.init(shopcard3.d_handler.text.getString());
                     shopcard3.cost_handler.init(shopcard3.cost_handler.text.getString());
 
-                    gamestage = Shop;
-                    balance + 10 + (rand() % 20);
+                    gamestage = Battle_end;
+                    money_increment = 10 + (rand() % 20);
+                    balance + money_increment;
+                    end_battle_info_tab.update("Winner", money_increment);
                 }
             }
 
@@ -2233,7 +2285,12 @@ int main()
 
 
         case Battle_end:
-
+            end_battle_info_tab.set_position(window);
+            end_battle_info_tab.draw(window);
+            if (end_battle_info_tab.animation_time == 0)
+            {
+                gamestage = Shop;
+            }
 
 
             break;
