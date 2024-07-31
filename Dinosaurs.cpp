@@ -673,12 +673,19 @@ public:
     bool is_pressed = false;
     RectangleShape background;
 
+    Texture* btn;
+    Texture* btn_hover;
 
-    Button()
+
+    Button(vector<Texture*> btn_textures)
     {
-        Vector2f background_size(100, 100);
+        btn = btn_textures[0];
+        btn_hover = btn_textures[1];
+
+        Vector2f background_size(170, 170);
         background.setSize(background_size);
-        background.setFillColor(Color(255, 0, 0, 255));
+        background.setTexture(btn, true);
+        //background.setFillColor(Color(255, 0, 0, 255));
     }
 
     ~Button() {}
@@ -696,7 +703,11 @@ public:
 
         if (check_hover(mouse_position))
         {
-
+            background.setTexture(btn_hover);
+        }
+        else
+        {
+            background.setTexture(btn);
         }
 
         window.draw(background);
@@ -1532,8 +1543,18 @@ public:
     int death_animation_cd = 0;
     bool fight_completed = false;
 
-    Fight()
+    RectangleShape death_medallion_atacker;
+    RectangleShape death_medallion_defender;
+    Texture* death_medallion_texture;
+
+    Fight(Texture* death_icon_texture)
     {
+        death_medallion_texture = death_icon_texture;
+        death_medallion_atacker.setSize(Vector2f(220, 220));
+        death_medallion_atacker.setTexture(death_medallion_texture, true);
+        death_medallion_defender.setSize(Vector2f(220, 220));
+        death_medallion_defender.setTexture(death_medallion_texture, true);
+        
         pos.x = 0;
         pos.y = 0;
         offset = 0;
@@ -1569,13 +1590,28 @@ public:
         }
         pos.x = x;
         pos.y = (window.getSize().y - atacker->card_bg.getSize().y) / 2;
-        atacker->set_position(-50 - atacker->card_bg.getSize().x + offset, pos.y);
-        defender->set_position(50 + window.getSize().x - offset, pos.y);
+
+        Vector2i atacker_pos;
+        atacker_pos.x = -50 - atacker->card_bg.getSize().x + offset;
+        atacker_pos.y = pos.y;
+
+        Vector2i defender_pos;
+        defender_pos.x = 50 + window.getSize().x - offset;
+        defender_pos.y = pos.y;
+
+        atacker->set_position(atacker_pos.x, atacker_pos.y);
+        defender->set_position(defender_pos.x, defender_pos.y);
         if (animation_completed)
         {
             dmg_on_atacker.set_position(atacker->card_bg.getPosition().x + (atacker->card_bg.getSize().x / 2) - (dmg_on_defender.text.getLocalBounds().width / 2), pos.y + atacker->card_bg.getSize().y / 2 - (dmg_on_defender.text.getLocalBounds().height));
             dmg_on_defender.set_position(defender->card_bg.getPosition().x + (defender->card_bg.getSize().x / 2) - (dmg_on_atacker.text.getLocalBounds().width / 2), pos.y + defender->card_bg.getSize().y / 2 - (dmg_on_atacker.text.getLocalBounds().height));
         }
+
+
+        death_medallion_atacker.setPosition(atacker_pos.x + (atacker->card_bg.getSize().x - death_medallion_atacker.getSize().x) / 2, 
+            atacker_pos.y + (atacker->card_bg.getSize().y - death_medallion_atacker.getSize().y) / 2);
+        death_medallion_defender.setPosition(defender_pos.x + (defender->card_bg.getSize().x - death_medallion_defender.getSize().x) / 2,
+            defender_pos.y + (defender->card_bg.getSize().y - death_medallion_defender.getSize().y) / 2);
     }
 
     void draw(RenderWindow& window)
@@ -1595,12 +1631,21 @@ public:
                 atacker->health_handler.init(to_string(atacker->health));
                 defender->health = defender->dino->get_hp();
                 defender->health_handler.init(to_string(defender->health));
-                death_animation_cd = 2000;
+                death_animation_cd = 4000;
             }
             //cout << animation_cd << endl;
         }
         if (animation_completed && (death_animation_cd > 0))
         {
+            if (atacker->dino->get_hp() <= 0)
+            {
+                window.draw(death_medallion_atacker);
+            }
+            if (defender->dino->get_hp() <= 0)
+            {
+                window.draw(death_medallion_defender);
+            }
+            
             death_animation_cd--;
             if (death_animation_cd == 0)
             {
@@ -1712,7 +1757,7 @@ int main()
     Texture background_mountain;
     background_mountain.loadFromFile("./assets/mountain.png");
     Texture background_idle;
-    background_idle.loadFromFile("./assets/idle.png");
+    background_idle.loadFromFile("./assets/idle_bg.png");
     Texture background_shop;
     background_shop.loadFromFile("./assets/shop.png");
     Font font;
@@ -1791,6 +1836,30 @@ int main()
     Texture location_info_holder_shop;
     location_info_holder_shop.loadFromFile("./assets/title_handler_shop.png");
 
+    vector<Texture*> button_textures;
+    Texture button_texture;
+    button_texture.loadFromFile("./assets/button.png");
+    button_textures.push_back(&button_texture);
+    Texture button_hover_texture;
+    button_hover_texture.loadFromFile("./assets/button_hover.png");
+    button_textures.push_back(&button_hover_texture);
+
+    vector<Texture*> button_textures_red;
+    Texture button_texture_red;
+    button_texture_red.loadFromFile("./assets/button_red.png");
+    button_textures_red.push_back(&button_texture_red);
+    Texture button_hover_texture_red;
+    button_hover_texture_red.loadFromFile("./assets/button_red_hover.png");
+    button_textures_red.push_back(&button_hover_texture_red);
+
+    Texture dead_icon;
+    dead_icon.loadFromFile("./assets/dead_icon.png");
+    
+    Image icon;
+    icon.loadFromFile("./assets/dead_icon.png");
+
+    window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
+
     //Создание бэкграунда
     Sprite background(background_shop);
 
@@ -1798,7 +1867,7 @@ int main()
     Text location_text_info("", font);
     location_text_info.setCharacterSize(30);
     location_text_info.setStyle(Text::Bold);
-    location_text_info.setFillColor(Color::White);
+    location_text_info.setFillColor(Color::Black);
     location_text_info.setPosition(0, 76);
     RectangleShape location_text_info_background;
     Vector2f location_text_info_background_size(360, 100);
@@ -1813,7 +1882,7 @@ int main()
     BattlePool player_battle_pool(&playerPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
     BattlePool enemy_battle_pool(&enemyPool, dino_card_bg, dino_card_holder, dino_battle_card_stat_holder, dino_card_holder_battle_glow);
 
-    Fight fight;
+    Fight fight = Fight(&dead_icon);
 
     DinoBattleCard* atacker = NULL;
     DinoBattleCard* defender = NULL;
@@ -1831,9 +1900,9 @@ int main()
     CardInventory card_inventory(box, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
     InventoryPool inventory_pool(&playerPool, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
     inventory_pool.update();
-    Button exit_idle_button;
-    exit_idle_button.set_position(100, window.getSize().y - 150);
-    exit_idle_button.background.setFillColor(Color(0, 255, 0, 255));
+    Button exit_idle_button = Button(button_textures);
+    exit_idle_button.set_position(100, window.getSize().y - 200);
+    //exit_idle_button.background.setFillColor(Color(0, 255, 0, 255));
     
 
     //Создание карточек в магазине
@@ -1845,11 +1914,11 @@ int main()
     DinoCard shopcard3(shopPool.slot3, dino_card_bg, dino_card_holder, dino_card_stat_holder, dino_card_holder_glow);
     DinoCard* selected_shopcard;
 
-    Button confirm_button;
-    confirm_button.background.setFillColor(Color(0, 255, 0, 255));
-    Button reject_button;
-    Button exit_shop_button;
-    exit_shop_button.set_position(window.getSize().x - 200, window.getSize().y - 200);
+    Button confirm_button = Button(button_textures);
+    //confirm_button.background.setFillColor(Color(0, 255, 0, 255));
+    Button reject_button = Button(button_textures_red);
+    Button exit_shop_button = Button(button_textures_red);
+    exit_shop_button.set_position(window.getSize().x - 300, window.getSize().y - 200);
 
     RectangleShape background_blur;
     Vector2f background_blur_size(window.getSize().x, window.getSize().y);
@@ -1888,7 +1957,7 @@ int main()
         switch (gamestage)
         {
         case Idle:
-            background.setTexture(background_shop, true);
+            background.setTexture(background_idle, true);
             //background.setTexture(background_idle);
             //background.setColor(Color::White);
             center_text(location_text_info, "lobby", window);
@@ -1902,7 +1971,7 @@ int main()
 
             
             //cout << card_inventory.cards[0].name;
-            card_inventory.set_position(740, 0);
+            card_inventory.set_position(760, 0);
             card_inventory.draw(window);
 
             for (size_t i = 0; i < card_inventory.cards.size(); i++)
@@ -2228,7 +2297,7 @@ int main()
                 selected_shopcard->set_position((window.getSize().x - selected_shopcard->card_bg.getSize().x) / 2 + 150, 150);
                 selected_shopcard->animate_press_from = true;
                 selected_shopcard->draw(window);
-                confirm_button.set_position((window.getSize().x - selected_shopcard->card_bg.getSize().x) / 2 - 50, 200);
+                confirm_button.set_position((window.getSize().x - selected_shopcard->card_bg.getSize().x) / 2 - 50, 150);
                 reject_button.set_position((window.getSize().x - selected_shopcard->card_bg.getSize().x) / 2 - 50, 350);
                 confirm_button.draw(window);
                 reject_button.draw(window);
