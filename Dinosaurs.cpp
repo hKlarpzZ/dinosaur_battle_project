@@ -1751,11 +1751,11 @@ int main()
 
     //Импорт ассетов
     Texture background_river;
-    background_river.loadFromFile("./assets/river.png");
+    background_river.loadFromFile("./assets/river_bg.png");
     Texture background_plain;
-    background_plain.loadFromFile("./assets/plains.png");
+    background_plain.loadFromFile("./assets/plains_bg.png");
     Texture background_mountain;
-    background_mountain.loadFromFile("./assets/mountain.png");
+    background_mountain.loadFromFile("./assets/mountain_bg.png");
     Texture background_idle;
     background_idle.loadFromFile("./assets/idle_bg.png");
     Texture background_shop;
